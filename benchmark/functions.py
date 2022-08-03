@@ -1,5 +1,7 @@
 #%%
 from minipatch import MPForest
+from sklearn.model_selection import KFold
+from sklearn.metrics import accuracy_score
 
 def wrapper(m_ratios, n_ratios, clf, number_of_patches, X, y):
     """
@@ -35,3 +37,22 @@ def wrapper(m_ratios, n_ratios, clf, number_of_patches, X, y):
             oop_errors.append(1-minipatch.oop_score_)
     return oop_errors
 
+
+def crossValidation(m_ratios, n_ratios, clf, number_of_patches, X, y, cv = 5):
+    kf = KFold(n_splits=cv)
+    accuracy = 0
+    m_ratio_value = None
+    n_ratio_value = None
+    for feature in m_ratios:
+        for sample in n_ratios:
+            for train_index, test_index in kf.split(X):
+                X_train, X_test = X[train_index].copy(), X[test_index].copy()
+                y_train, y_test = y[train_index].copy(), y[test_index].copy()
+                minipatch = MPForest(clf, feature, sample, number_of_patches)
+                minipatch.fit(X_train,y_train)
+                acc = accuracy_score(y_test,minipatch.predict(X_test))
+                if acc > accuracy:
+                    accuracy = acc
+                    m_ratio_value = feature
+                    n_ratio_value = sample
+    return m_ratio_value, n_ratio_value
